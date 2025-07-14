@@ -144,22 +144,71 @@ app.post('/get-kick-user', async (req, res) => {
     if (!access_token) return res.status(400).json({ error: 'Missing access_token' });
 
     try {
+        console.log('🔍 Fetching user data from Kick API...');
+        
         const response = await fetch('https://kick.com/api/v1/user', {
+            method: 'GET',
             headers: {
                 'Authorization': `Bearer ${access_token}`,
                 'Accept': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://kick.com',
+                'Origin': 'https://kick.com',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            },
+            timeout: 15000 // 15 saniye timeout
         });
+
+        console.log('📡 Kick API response status:', response.status);
+        console.log('📡 Kick API response headers:', Object.fromEntries(response.headers));
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Kick API error response:', errorText);
+            
+            // Daha detaylı hata bilgisi
+            return res.status(response.status).json({ 
+                error: 'Kick API request failed',
+                status: response.status,
+                statusText: response.statusText,
+                details: errorText,
+                timestamp: new Date().toISOString()
+            });
+        }
+
         const contentType = response.headers.get('content-type');
+        console.log('📋 Content-Type:', contentType);
+        
         if (!contentType || !contentType.includes('application/json')) {
             const text = await response.text();
-            return res.status(500).json({ error: 'Non-JSON response', details: text });
+            console.error('❌ Non-JSON response:', text);
+            return res.status(500).json({ 
+                error: 'Non-JSON response', 
+                details: text,
+                contentType: contentType 
+            });
         }
+
         const data = await response.json();
+        console.log('✅ User data fetched successfully');
         res.json(data);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
+        
+    } catch (error) {
+        console.error('❌ get-kick-user error:', error);
+        
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            return res.status(500).json({ 
+                error: 'Network error - Unable to reach Kick API',
+                details: error.message 
+            });
+        }
+        
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 
