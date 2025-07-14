@@ -146,28 +146,48 @@ app.post('/get-kick-user', async (req, res) => {
     try {
         console.log('🔍 Fetching user data from Kick API...');
         
+        // Multiple User-Agent rotation
+        const userAgents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0'
+        ];
+        
+        const randomUA = userAgents[Math.floor(Math.random() * userAgents.length)];
+        
+        // Delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+        
         const response = await fetch('https://kick.com/api/v1/user', {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${access_token}`,
-                'Accept': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer': 'https://kick.com',
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'User-Agent': randomUA,
+                'Referer': 'https://kick.com/',
                 'Origin': 'https://kick.com',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Sec-Fetch-Dest': 'empty',
+                'Sec-Fetch-Mode': 'cors',
+                'Sec-Fetch-Site': 'same-origin',
+                'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                'Sec-Ch-Ua-Mobile': '?0',
+                'Sec-Ch-Ua-Platform': '"Windows"',
                 'Cache-Control': 'no-cache',
                 'Pragma': 'no-cache'
-            },
-            timeout: 15000 // 15 saniye timeout
+            }
         });
 
         console.log('📡 Kick API response status:', response.status);
-        console.log('📡 Kick API response headers:', Object.fromEntries(response.headers));
-
+        
         if (!response.ok) {
             const errorText = await response.text();
             console.error('❌ Kick API error response:', errorText);
             
-            // Daha detaylı hata bilgisi
             return res.status(response.status).json({ 
                 error: 'Kick API request failed',
                 status: response.status,
@@ -178,7 +198,6 @@ app.post('/get-kick-user', async (req, res) => {
         }
 
         const contentType = response.headers.get('content-type');
-        console.log('📋 Content-Type:', contentType);
         
         if (!contentType || !contentType.includes('application/json')) {
             const text = await response.text();
@@ -196,22 +215,12 @@ app.post('/get-kick-user', async (req, res) => {
         
     } catch (error) {
         console.error('❌ get-kick-user error:', error);
-        
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            return res.status(500).json({ 
-                error: 'Network error - Unable to reach Kick API',
-                details: error.message 
-            });
-        }
-        
         res.status(500).json({ 
             error: 'Internal server error',
-            details: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            details: error.message
         });
     }
 });
-
 
 // Health check endpoint
 app.get('/health', (req, res) => {
