@@ -139,6 +139,31 @@ app.post('/oauth/exchange', async (req, res) => {
     }
 });
 
+app.post('/get-kick-user', async (req, res) => {
+    const { access_token } = req.body;
+    if (!access_token) return res.status(400).json({ error: 'Missing access_token' });
+
+    try {
+        const response = await fetch('https://kick.com/api/v1/user', {
+            headers: {
+                'Authorization': `Bearer ${access_token}`,
+                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+        });
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            return res.status(500).json({ error: 'Non-JSON response', details: text });
+        }
+        const data = await response.json();
+        res.json(data);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({
