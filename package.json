@@ -1,0 +1,27 @@
+{
+  "name": "drop-game-proxy",
+  "version": "1.0.0",
+  "description": "OAuth proxy server for Drop Game - Render.com deployment",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "keywords": [
+    "oauth",
+    "proxy",
+    "kick",
+    "drop-game"
+  ],
+  "author": "Drop Game",
+  "license": "MIT"
+}
