@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 10000;
 
 // CORS configuration - Allow requests from your Netlify domain
 app.use(cors({
@@ -11,11 +11,13 @@ app.use(cors({
         'https://parachutegame.netlify.app',
         'http://localhost:3000',
         'http://127.0.0.1:3000',
-        'http://localhost:3001'
+        'http://localhost:3001',
+        'http://localhost:5173', // Vite dev server
+        'http://127.0.0.1:5173'  // Vite dev server
     ],
     credentials: true,
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
     optionsSuccessStatus: 200
 }));
 
@@ -145,7 +147,18 @@ app.get('/health', (req, res) => {
         client_id_configured: !!CLIENT_ID,
         client_secret_configured: !!CLIENT_SECRET,
         config_valid: isConfigValid(),
-        environment: process.env.NODE_ENV || 'development'
+        environment: process.env.NODE_ENV || 'development',
+        port: PORT
+    });
+});
+
+// Test endpoint for CORS
+app.get('/test', (req, res) => {
+    res.json({
+        message: 'CORS test successful',
+        timestamp: new Date().toISOString(),
+        origin: req.headers.origin || 'no-origin',
+        userAgent: req.headers['user-agent'] || 'no-user-agent'
     });
 });
 
@@ -156,6 +169,7 @@ app.get('/', (req, res) => {
         status: 'running',
         endpoints: {
             health: '/health',
+            test: '/test',
             oauth_exchange: '/oauth/exchange',
             emote_proxy: '/proxy/emote/:emoteId'
         },
@@ -163,7 +177,27 @@ app.get('/', (req, res) => {
     });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('❌ Unhandled error:', err);
+    res.status(500).json({
+        error: 'Internal server error',
+        message: err.message,
+        timestamp: new Date().toISOString()
+    });
+});
+
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({
+        error: 'Not found',
+        path: req.path,
+        method: req.method,
+        timestamp: new Date().toISOString()
+    });
+});
+
+const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 OAuth Proxy Server running on port ${PORT}`);
     console.log('📋 Configuration:');
     console.log('   Client ID configured:', !!CLIENT_ID);
@@ -175,6 +209,21 @@ app.listen(PORT, '0.0.0.0', () => {
         console.warn('⚠️  CENTRAL_CLIENT_SECRET environment variable not set!');
         console.warn('   This is required for OAuth to work properly.');
     }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('🛑 SIGTERM received, shutting down gracefully');
+    server.close(() => {
+        console.log('✅ Process terminated');
+    });
+});
+
+process.on('SIGINT', () => {
+    console.log('🛑 SIGINT received, shutting down gracefully');
+    server.close(() => {
+        console.log('✅ Process terminated');
+    });
 });
 
 export default app;
