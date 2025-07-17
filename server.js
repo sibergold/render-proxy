@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { SERVER_OAUTH_CONFIG, isServerConfigValid } from './server-config';
+import { SERVER_OAUTH_CONFIG, isServerConfigValid } from './server-config.js';
 
 const app = express();
 const PORT = 3001;
@@ -126,6 +126,16 @@ app.get('/health', (req, res) => {
         config_valid: isServerConfigValid()
     });
 });
+app.get('/', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        client_id_configured: !!SERVER_OAUTH_CONFIG.CLIENT_ID,
+        client_secret_configured: !!SERVER_OAUTH_CONFIG.CLIENT_SECRET,
+        config_valid: isServerConfigValid()
+    });
+});
+
 
 app.listen(PORT, () => {
     console.log(`OAuth Proxy Server running on ${PORT}`);

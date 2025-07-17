@@ -10,9 +10,9 @@
     "railway": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
   },
   "engines": {
     "node": "18.x"
@@ -24,5 +24,8 @@
     "drop-game"
   ],
   "author": "Drop Game",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.0.14"
+  }
 }
