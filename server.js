@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 
 // CORS configuration - Allow requests from your Netlify domain
 app.use(cors({
@@ -165,15 +165,26 @@ app.post('/get-kick-user', async (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-    res.json({
+    const healthStatus = {
         status: 'ok',
         timestamp: new Date().toISOString(),
         client_id_configured: !!CLIENT_ID,
         client_secret_configured: !!CLIENT_SECRET,
         config_valid: isConfigValid(),
         environment: process.env.NODE_ENV || 'development',
-        port: PORT
+        port: PORT,
+        platform: 'railway',
+        uptime: process.uptime(),
+        memory: process.memoryUsage()
+    };
+
+    // Set proper headers for Railway
+    res.set({
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache'
     });
+
+    res.status(200).json(healthStatus);
 });
 
 // Test endpoint for CORS
@@ -221,13 +232,14 @@ app.use((req, res) => {
     });
 });
 
-const server = app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, () => {
     console.log(`🚀 OAuth Proxy Server running on port ${PORT}`);
     console.log('📋 Configuration:');
     console.log('   Client ID configured:', !!CLIENT_ID);
     console.log('   Client Secret configured:', !!CLIENT_SECRET);
     console.log('   Config valid:', isConfigValid());
     console.log('   Environment:', process.env.NODE_ENV || 'development');
+    console.log('   Host binding: Railway auto-detect');
 
     if (!CLIENT_SECRET) {
         console.warn('⚠️  CENTRAL_CLIENT_SECRET environment variable not set!');
