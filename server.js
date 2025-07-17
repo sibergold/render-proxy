@@ -4,7 +4,7 @@ import cors from 'cors';
 import { SERVER_OAUTH_CONFIG, isServerConfigValid } from './server-config.js';
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 // Enable CORS for all routes
 app.use(cors({
