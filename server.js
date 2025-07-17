@@ -116,6 +116,26 @@ app.post('/oauth/exchange', async (req, res) => {
     }
 });
 
+app.get('/test-cors', (req, res) => {
+    res.json({
+        message: 'CORS test successful!',
+        origin: req.headers.origin || 'No origin header',
+        timestamp: new Date().toISOString(),
+        headers: {
+            'user-agent': req.headers['user-agent'],
+            'referer': req.headers.referer || 'No referer',
+            'host': req.headers.host
+        }
+    });
+});
+
+app.options('/test-cors', (req, res) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+    res.sendStatus(200);
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({
