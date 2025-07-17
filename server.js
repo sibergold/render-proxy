@@ -116,6 +116,55 @@ app.post('/oauth/exchange', async (req, res) => {
     }
 });
 
+// Get Kick user info endpoint
+app.post('/get-kick-user', async (req, res) => {
+    try {
+        const { access_token } = req.body;
+        
+        console.log('Get user info request:', { access_token: !!access_token });
+        
+        if (!access_token) {
+            return res.status(400).json({ 
+                error: 'Missing required parameter: access_token' 
+            });
+        }
+
+        // Get user info from Kick API
+        const userResponse = await fetch(`${SERVER_OAUTH_CONFIG.OAUTH_SETTINGS.api_base}/user`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${access_token}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        console.log('Kick user response status:', userResponse.status);
+        
+        if (!userResponse.ok) {
+            const errorText = await userResponse.text();
+            console.error('Kick user error:', errorText);
+            return res.status(userResponse.status).json({ 
+                error: 'Failed to get user info',
+                details: errorText 
+            });
+        }
+
+        const userData = await userResponse.json();
+        console.log('User info retrieved successfully');
+        
+        // Return user data
+        res.json(userData);
+
+    } catch (error) {
+        console.error('Get user info error:', error);
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+
+
 app.get('/test-cors', (req, res) => {
     res.json({
         message: 'CORS test successful!',
@@ -155,6 +204,8 @@ app.get('/', (req, res) => {
         config_valid: isServerConfigValid()
     });
 });
+
+
 
 
 app.listen(PORT, () => {
