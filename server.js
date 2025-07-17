@@ -18,7 +18,15 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// CORS proxy endpoint for Kick emotes
+// OPTIONS handler for emote proxy
+app.options('/proxy/emote/:emoteId', (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.sendStatus(200);
+});
+
+// GET handler for emote proxy
 app.get('/proxy/emote/:emoteId', async (req, res) => {
     try {
         const { emoteId } = req.params;
@@ -40,7 +48,7 @@ app.get('/proxy/emote/:emoteId', async (req, res) => {
         res.set({
             'Content-Type': contentType,
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type',
             'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
         });
