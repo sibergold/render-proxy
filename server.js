@@ -129,31 +129,103 @@ app.post('/get-kick-user', async (req, res) => {
             });
         }
 
-        // Get user info from Kick API
-        const userResponse = await fetch(`${SERVER_OAUTH_CONFIG.OAUTH_SETTINGS.api_base}/user`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${access_token}`,
-                'Accept': 'application/json'
-            }
-        });
+        // Try multiple API endpoints as Kick API structure might vary
+        const endpoints = [
+            'https://api.kick.com/public/v1/users', // New official API
+            `${SERVER_OAUTH_CONFIG.OAUTH_SETTINGS.api_base}/user`,
+            'https://kick.com/api/v1/user',
+            'https://kick.com/api/v2/user/me',
+            'https://kick.com/api/v1/user/me'
+        ];
 
-        console.log('Kick user response status:', userResponse.status);
-        
-        if (!userResponse.ok) {
-            const errorText = await userResponse.text();
-            console.error('Kick user error:', errorText);
-            return res.status(userResponse.status).json({ 
-                error: 'Failed to get user info',
-                details: errorText 
-            });
+        let lastError = null;
+
+        for (const endpoint of endpoints) {
+            try {
+                console.log('Trying API endpoint:', endpoint);
+
+                const response = await fetch(endpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${access_token}`,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                console.log(`API response status for ${endpoint}:`, response.status);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error(`API error response from ${endpoint}:`, errorText);
+                    lastError = new Error(`API request failed: ${response.status} - ${errorText}`);
+                    continue; // Try next endpoint
+                }
+
+                // Check if response is actually JSON
+                const contentType = response.headers.get('content-type');
+                console.log('Response content-type:', contentType);
+
+                if (!contentType || !contentType.includes('application/json')) {
+                    const responseText = await response.text();
+                    console.error(`Non-JSON response from ${endpoint}:`, responseText.substring(0, 200));
+                    lastError = new Error(`Expected JSON response but got: ${contentType}`);
+                    continue; // Try next endpoint
+                }
+
+                const userData = await response.json();
+                console.log('User data received from', endpoint, ':', userData);
+
+                // Handle new API format vs old API format
+                if (endpoint.includes('api.kick.com/public/v1/users')) {
+                    // New API returns data in array format
+                    if (userData.data && Array.isArray(userData.data) && userData.data.length > 0) {
+                        const user = userData.data[0];
+                        console.log('🔄 Getting chatroom ID for user:', user.name);
+
+                        // Get chatroom ID from old API
+                        let chatroomId = null;
+                        try {
+                            const channelResponse = await fetch(`https://kick.com/api/v1/channels/${user.name}`, {
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+
+                            if (channelResponse.ok) {
+                                const channelData = await channelResponse.json();
+                                chatroomId = channelData.chatroom?.id;
+                                console.log('Chatroom ID found:', chatroomId);
+                            }
+                        } catch (error) {
+                            console.warn('Could not get chatroom ID:', error);
+                        }
+
+                        // Convert to old format for compatibility
+                        const result = {
+                            id: user.user_id,
+                            username: user.name,
+                            email: user.email,
+                            profile_picture: user.profile_picture,
+                            chatroom: { id: chatroomId }
+                        };
+                        
+                        return res.json(result);
+                    }
+                }
+
+                // Return userData as-is for other endpoints
+                return res.json(userData);
+
+            } catch (error) {
+                console.error(`Error with endpoint ${endpoint}:`, error);
+                lastError = error;
+                continue; // Try next endpoint
+            }
         }
 
-        const userData = await userResponse.json();
-        console.log('User info retrieved successfully');
-        
-        // Return user data
-        res.json(userData);
+        // If we get here, all endpoints failed
+        throw lastError || new Error('All API endpoints failed');
 
     } catch (error) {
         console.error('Get user info error:', error);
