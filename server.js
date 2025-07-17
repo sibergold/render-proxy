@@ -13,7 +13,9 @@ app.use(cors({
         'http://127.0.0.1:3000',
         'http://localhost:3001',
         'http://localhost:5173', // Vite dev server
-        'http://127.0.0.1:5173'  // Vite dev server
+        'http://127.0.0.1:5173',
+        'https://render-proxy-production-9134.up.railway.app'
+          // Vite dev server
     ],
     credentials: true,
     methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
